@@ -15,7 +15,7 @@ const publicationData = [
   { month: 'Jun', count: 1 },
 ];
 
-export default function Dashboard({ tasks, projects }) {
+export default function Dashboard({ tasks = [], projects = [] }) {
   const todayTasks = tasks.filter(task => task.timeframe === '今日');
   const thisWeekTasks = tasks.filter(task => task.timeframe === '今週');
 
@@ -30,15 +30,19 @@ export default function Dashboard({ tasks, projects }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {projects.map(project => (
-                <div key={project.id}>
-                  <div className="flex justify-between mb-1">
-                    <span>{project.name}</span>
-                    <span>{project.progress}%</span>
+              {projects.length > 0 ? (
+                projects.map(project => (
+                  <div key={project.id}>
+                    <div className="flex justify-between mb-1">
+                      <span>{project.name}</span>
+                      <span>{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-2" />
                   </div>
-                  <Progress value={project.progress} className="h-2" />
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>プロジェクトがありません</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -74,21 +78,29 @@ export default function Dashboard({ tasks, projects }) {
         <CardContent>
           <h3 className="text-lg font-semibold mb-2">今日のタスク</h3>
           <ul className="space-y-2 mb-4">
-            {todayTasks.map(task => (
-              <li key={task.id} className="flex items-center">
-                <CalendarIcon className="mr-2 text-blue-500" size={16} />
-                <Link to={`/task/${task.id}`}>{task.name}</Link>
-              </li>
-            ))}
+            {todayTasks.length > 0 ? (
+              todayTasks.map(task => (
+                <li key={task.id} className="flex items-center">
+                  <CalendarIcon className="mr-2 text-blue-500" size={16} />
+                  <Link to={`/task/${task.id}`}>{task.name}</Link>
+                </li>
+              ))
+            ) : (
+              <li>今日のタスクはありません</li>
+            )}
           </ul>
           <h3 className="text-lg font-semibold mb-2">今週のタスク</h3>
           <ul className="space-y-2">
-            {thisWeekTasks.map(task => (
-              <li key={task.id} className="flex items-center">
-                <CalendarIcon className="mr-2 text-green-500" size={16} />
-                <Link to={`/task/${task.id}`}>{task.name}</Link>
-              </li>
-            ))}
+            {thisWeekTasks.length > 0 ? (
+              thisWeekTasks.map(task => (
+                <li key={task.id} className="flex items-center">
+                  <CalendarIcon className="mr-2 text-green-500" size={16} />
+                  <Link to={`/task/${task.id}`}>{task.name}</Link>
+                </li>
+              ))
+            ) : (
+              <li>今週のタスクはありません</li>
+            )}
           </ul>
         </CardContent>
       </Card>
