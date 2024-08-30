@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Calendar } from "@/components/ui/calendar";
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -15,6 +16,30 @@ const publicationData = [
 ];
 
 export default function Dashboard() {
+  const [tasks, setTasks] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  useEffect(() => {
+    // Here you would typically fetch tasks from an API or global state
+    // For now, we'll use mock data
+    const mockTasks = [
+      { id: 1, name: "実験計画会議", dueDate: "2024-03-15", status: "未完了" },
+      { id: 2, name: "データ解析ワークショップ", dueDate: "2024-03-22", status: "未完了" },
+      { id: 3, name: "論文提出締切", dueDate: "2024-04-05", status: "未完了" },
+    ];
+    setTasks(mockTasks);
+  }, []);
+
+  const addTask = (name) => {
+    const newTask = {
+      id: Date.now(),
+      name: name,
+      dueDate: selectedDate.toISOString().split('T')[0],
+      status: "未完了"
+    };
+    setTasks([...tasks, newTask]);
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">研究管理ダッシュボード</h1>
@@ -72,25 +97,42 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             今後の予定
-            <Button variant="link">
+            <Button variant="link" onClick={() => console.log("カレンダーを開く")}>
               カレンダー <ChevronRight className="inline h-4 w-4" />
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex space-x-4 mb-4">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              className="rounded-md border"
+            />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">タスク追加</h3>
+              <input
+                type="text"
+                placeholder="新しいタスク"
+                className="border rounded p-2 mb-2 w-full"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    addTask(e.target.value);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <p className="text-sm text-gray-500">Enterキーを押してタスクを追加</p>
+            </div>
+          </div>
           <ul className="space-y-2">
-            <li className="flex items-center">
-              <Calendar className="mr-2 text-red-500" size={16} />
-              <span>実験計画会議 (明日)</span>
-            </li>
-            <li className="flex items-center">
-              <Calendar className="mr-2 text-green-500" size={16} />
-              <span>データ解析ワークショップ (来週)</span>
-            </li>
-            <li className="flex items-center">
-              <Calendar className="mr-2 text-yellow-500" size={16} />
-              <span>論文提出締切 (3週間後)</span>
-            </li>
+            {tasks.map(task => (
+              <li key={task.id} className="flex items-center">
+                <CalendarIcon className="mr-2 text-blue-500" size={16} />
+                <span>{task.name} ({task.dueDate})</span>
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>
