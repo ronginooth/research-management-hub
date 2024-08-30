@@ -5,29 +5,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 
-const TaskManager = () => {
-  const [tasks, setTasks] = useState([]);
+const TaskManager = ({ tasks, addTask, updateTask }) => {
   const [newTask, setNewTask] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const addTask = () => {
+  const handleAddTask = () => {
     if (newTask.trim() !== '') {
-      setTasks([...tasks, { 
-        id: Date.now(), 
-        name: newTask, 
+      addTask({
+        name: newTask,
         status: '未完了',
         dueDate: format(selectedDate, 'yyyy-MM-dd')
-      }]);
+      });
       setNewTask('');
     }
   };
 
-  const toggleTaskStatus = (id) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, status: task.status === '完了' ? '未完了' : '完了' } : task
-    ));
+  const toggleTaskStatus = (task) => {
+    const updatedTask = {
+      ...task,
+      status: task.status === '完了' ? '未完了' : '完了'
+    };
+    updateTask(updatedTask);
   };
 
   return (
@@ -50,7 +49,7 @@ const TaskManager = () => {
             onSelect={setSelectedDate}
             className="mr-2"
           />
-          <Button onClick={addTask}>追加</Button>
+          <Button onClick={handleAddTask}>追加</Button>
         </div>
         <Table>
           <TableHeader>
@@ -68,7 +67,7 @@ const TaskManager = () => {
                 <TableCell>{task.dueDate}</TableCell>
                 <TableCell>{task.status}</TableCell>
                 <TableCell>
-                  <Button onClick={() => toggleTaskStatus(task.id)}>
+                  <Button onClick={() => toggleTaskStatus(task)}>
                     {task.status === '完了' ? '未完了にする' : '完了にする'}
                   </Button>
                 </TableCell>

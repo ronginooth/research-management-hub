@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -15,29 +16,19 @@ const publicationData = [
   { month: 'Jun', count: 1 },
 ];
 
-export default function Dashboard() {
-  const [tasks, setTasks] = useState([]);
+export default function Dashboard({ tasks, addTask }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [newTaskName, setNewTaskName] = useState('');
 
-  useEffect(() => {
-    // Here you would typically fetch tasks from an API or global state
-    // For now, we'll use mock data
-    const mockTasks = [
-      { id: 1, name: "実験計画会議", dueDate: "2024-03-15", status: "未完了" },
-      { id: 2, name: "データ解析ワークショップ", dueDate: "2024-03-22", status: "未完了" },
-      { id: 3, name: "論文提出締切", dueDate: "2024-04-05", status: "未完了" },
-    ];
-    setTasks(mockTasks);
-  }, []);
-
-  const addTask = (name) => {
-    const newTask = {
-      id: Date.now(),
-      name: name,
-      dueDate: selectedDate.toISOString().split('T')[0],
-      status: "未完了"
-    };
-    setTasks([...tasks, newTask]);
+  const handleAddTask = () => {
+    if (newTaskName.trim() !== '') {
+      addTask({
+        name: newTaskName,
+        dueDate: selectedDate.toISOString().split('T')[0],
+        status: "未完了"
+      });
+      setNewTaskName('');
+    }
   };
 
   return (
@@ -110,20 +101,18 @@ export default function Dashboard() {
               onSelect={setSelectedDate}
               className="rounded-md border"
             />
-            <div>
+            <div className="flex-1">
               <h3 className="text-lg font-semibold mb-2">タスク追加</h3>
-              <input
-                type="text"
-                placeholder="新しいタスク"
-                className="border rounded p-2 mb-2 w-full"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addTask(e.target.value);
-                    e.target.value = '';
-                  }
-                }}
-              />
-              <p className="text-sm text-gray-500">Enterキーを押してタスクを追加</p>
+              <div className="flex space-x-2">
+                <Input
+                  type="text"
+                  value={newTaskName}
+                  onChange={(e) => setNewTaskName(e.target.value)}
+                  placeholder="新しいタスク"
+                  className="flex-1"
+                />
+                <Button onClick={handleAddTask}>追加</Button>
+              </div>
             </div>
           </div>
           <ul className="space-y-2">
