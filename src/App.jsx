@@ -7,6 +7,9 @@ import TaskManager from "./components/TaskManager";
 import ExperimentNotes from "./components/ExperimentNotes";
 import DataAnalysis from "./components/DataAnalysis";
 import Layout from "./components/Layout";
+import ExperimentPlanner from "./components/ExperimentPlanner";
+import LiteratureManager from "./components/LiteratureManager";
+import InventoryManager from "./components/InventoryManager";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +24,9 @@ const App = () => (
             <Route path="tasks" element={<TaskManager />} />
             <Route path="experiments" element={<ExperimentNotes />} />
             <Route path="analysis" element={<DataAnalysis />} />
+            <Route path="planner" element={<ExperimentPlanner />} />
+            <Route path="literature" element={<LiteratureManager />} />
+            <Route path="inventory" element={<InventoryManager />} />
           </Route>
         </Routes>
       </BrowserRouter>
