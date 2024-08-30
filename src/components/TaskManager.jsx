@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,21 +7,28 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, isToday, isThisWeek } from "date-fns";
 import { Link } from 'react-router-dom';
+import { getTasks, addTask as addTaskToDb, updateTask as updateTaskInDb } from '../utils/taskDatabase';
 
-const TaskManager = ({ tasks, addTask, updateTask, projects }) => {
+const TaskManager = ({ projects }) => {
+  const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedProject, setSelectedProject] = useState('');
 
+  useEffect(() => {
+    setTasks(getTasks());
+  }, []);
+
   const handleAddTask = () => {
     if (newTask.trim() !== '') {
-      addTask({
+      const task = addTaskToDb({
         name: newTask,
         status: '未完了',
         dueDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
         project: selectedProject,
         timeframe: getTimeframe(selectedDate),
       });
+      setTasks([...tasks, task]);
       setNewTask('');
       setSelectedDate(null);
       setSelectedProject('');
@@ -40,7 +47,9 @@ const TaskManager = ({ tasks, addTask, updateTask, projects }) => {
       ...task,
       status: task.status === '完了' ? '未完了' : '完了'
     };
-    updateTask(updatedTask);
+    if (updateTaskInDb(updatedTask)) {
+      setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    }
   };
 
   return (
