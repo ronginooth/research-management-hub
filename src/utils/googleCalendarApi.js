@@ -37,7 +37,7 @@ const initializeGapiClient = async () => {
 };
 
 export const gisLoaded = () => {
-  try {
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
@@ -45,14 +45,14 @@ export const gisLoaded = () => {
     });
     gisInited = true;
     maybeEnableButtons();
-  } catch (error) {
-    console.error('Error initializing Google Identity Services:', error);
+  } else {
+    console.error('Google Identity Services not loaded');
   }
 };
 
 const maybeEnableButtons = () => {
   if (gapiInited && gisInited) {
-    document.dispatchEvent(new Event('gapi-loaded'));
+    console.log('Google APIs initialized');
   }
 };
 
@@ -65,8 +65,7 @@ export const handleAuthClick = () => {
   return new Promise((resolve, reject) => {
     tokenClient.callback = async (resp) => {
       if (resp.error !== undefined) {
-        reject(new Error(resp.error));
-        return;
+        reject(resp);
       }
       try {
         const events = await listUpcomingEvents();
@@ -94,7 +93,8 @@ export const handleSignoutClick = () => {
 
 export const listUpcomingEvents = async () => {
   if (!gapi.client) {
-    throw new Error('GAPI client not initialized');
+    console.error('GAPI client not initialized');
+    return [];
   }
 
   try {
@@ -119,7 +119,7 @@ export const listUpcomingEvents = async () => {
     }));
   } catch (error) {
     console.error('Error fetching calendar events:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -131,20 +131,20 @@ export const loadGoogleApi = () => {
       gapi.load('client', async () => {
         try {
           await initializeGoogleApi();
-          const gisScript = document.createElement('script');
-          gisScript.src = 'https://accounts.google.com/gsi/client';
-          gisScript.onload = () => {
-            gisLoaded();
-            resolve();
-          };
-          gisScript.onerror = () => reject(new Error('Failed to load Google Identity Services'));
-          document.body.appendChild(gisScript);
+          resolve();
         } catch (error) {
           reject(error);
         }
       });
     };
-    script.onerror = () => reject(new Error('Failed to load Google API'));
     document.body.appendChild(script);
+
+    const gisScript = document.createElement('script');
+    gisScript.src = 'https://accounts.google.com/gsi/client';
+    gisScript.onload = () => {
+      gisLoaded();
+      resolve();
+    };
+    document.body.appendChild(gisScript);
   });
 };
