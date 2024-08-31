@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Link } from 'react-router-dom';
 import { getTasks, updateTask, addTask } from '../utils/taskDatabase';
 import { format, parseISO, isToday } from 'date-fns';
-import { initializeGoogleApi, handleAuthClick, handleSignoutClick, listUpcomingEvents } from '../utils/googleCalendarApi';
+import { loadGoogleApi, handleAuthClick, handleSignoutClick, listUpcomingEvents } from '../utils/googleCalendarApi';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -26,10 +26,20 @@ export default function Dashboard({ projects = [] }) {
   const [newTask, setNewTask] = useState('');
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isGoogleApiLoaded, setIsGoogleApiLoaded] = useState(false);
 
   useEffect(() => {
     setTasks(getTasks());
-    initializeGoogleApi();
+    const initializeGoogleCalendar = async () => {
+      try {
+        await loadGoogleApi();
+        setIsGoogleApiLoaded(true);
+      } catch (error) {
+        console.error('Failed to initialize Google Calendar API:', error);
+      }
+    };
+
+    initializeGoogleCalendar();
   }, []);
 
   const fetchCalendarEvents = async () => {
@@ -38,9 +48,19 @@ export default function Dashboard({ projects = [] }) {
   };
 
   const handleGoogleSignIn = async () => {
-    await handleAuthClick();
-    setIsSignedIn(true);
-    fetchCalendarEvents();
+    if (!isGoogleApiLoaded) {
+      console.error('Google API not loaded yet');
+      return;
+    }
+
+    try {
+      const events = await handleAuthClick();
+      console.log('Fetched events:', events);
+      setCalendarEvents(events);
+      setIsSignedIn(true);
+    } catch (error) {
+      console.error('Failed to sign in:', error);
+    }
   };
 
   const handleGoogleSignOut = () => {
@@ -177,13 +197,17 @@ export default function Dashboard({ projects = [] }) {
             <CardTitle>Google Calendar</CardTitle>
           </CardHeader>
           <CardContent>
-            {isSignedIn ? (
-              <>
-                {renderCalendar()}
-                <Button onClick={handleGoogleSignOut} className="mt-4">Sign Out</Button>
-              </>
+            {isGoogleApiLoaded ? (
+              isSignedIn ? (
+                <>
+                  {renderCalendar()}
+                  <Button onClick={handleGoogleSignOut} className="mt-4">Sign Out</Button>
+                </>
+              ) : (
+                <Button onClick={handleGoogleSignIn}>Sign In with Google</Button>
+              )
             ) : (
-              <Button onClick={handleGoogleSignIn}>Sign In with Google</Button>
+              <p>Loading Google API...</p>
             )}
           </CardContent>
         </Card>

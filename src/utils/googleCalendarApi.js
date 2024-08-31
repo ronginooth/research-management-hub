@@ -9,21 +9,23 @@ let tokenClient;
 let gapiInited = false;
 let gisInited = false;
 
-const initializeGapiClient = async () => {
-  try {
-    await gapi.client.init({
-      apiKey: API_KEY,
-      discoveryDocs: [DISCOVERY_DOC],
+export const initializeGoogleApi = async () => {
+  await new Promise((resolve, reject) => {
+    gapi.load('client', async () => {
+      try {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: [DISCOVERY_DOC],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
     });
-    gapiInited = true;
-    maybeEnableButtons();
-  } catch (error) {
-    console.error('Error initializing GAPI client:', error);
-    throw error;
-  }
-};
+  });
 
-const gisLoaded = () => {
   if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
@@ -110,36 +112,23 @@ export const listUpcomingEvents = async () => {
   }
 };
 
-export const loadGoogleApi = () => {
-  return new Promise((resolve, reject) => {
-    const loadGapiScript = () => {
+export const loadGoogleApi = async () => {
+  const loadScript = (src) => {
+    return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = () => {
-        gapi.load('client', async () => {
-          try {
-            await initializeGapiClient();
-            loadGisScript();
-          } catch (error) {
-            reject(error);
-          }
-        });
-      };
-      script.onerror = () => reject(new Error('Failed to load GAPI script'));
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
       document.body.appendChild(script);
-    };
+    });
+  };
 
-    const loadGisScript = () => {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.onload = () => {
-        gisLoaded();
-        resolve();
-      };
-      script.onerror = () => reject(new Error('Failed to load GIS script'));
-      document.body.appendChild(script);
-    };
-
-    loadGapiScript();
-  });
+  try {
+    await loadScript('https://apis.google.com/js/api.js');
+    await loadScript('https://accounts.google.com/gsi/client');
+    await initializeGoogleApi();
+  } catch (error) {
+    console.error('Failed to load Google API scripts:', error);
+    throw error;
+  }
 };
