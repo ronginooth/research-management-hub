@@ -9,7 +9,8 @@ import { CalendarIcon, ChevronRight, Plus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
 import { getTasks, updateTask, addTask } from '../utils/taskDatabase';
-import { format } from 'date-fns';
+import { format, parseISO, isToday } from 'date-fns';
+import { initializeGoogleApi, handleAuthClick, handleSignoutClick, listUpcomingEvents } from '../utils/googleCalendarApi';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -20,24 +21,36 @@ const publicationData = [
   { month: 'Jun', count: 1 },
 ];
 
-// Mock Google Calendar events
-const calendarEvents = [
-  { id: 1, title: 'ミーティング', start: '09:00', end: '10:00' },
-  { id: 2, title: '実験', start: '11:00', end: '13:00' },
-  { id: 3, title: '論文執筆', start: '14:00', end: '16:00' },
-  { id: 4, title: 'セミナー', start: '16:30', end: '18:00' },
-];
-
 export default function Dashboard({ projects = [] }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
     setTasks(getTasks());
+    initializeGoogleApi();
   }, []);
 
-  const todayTasks = tasks.filter(task => task.timeframe === '今日');
-  const thisWeekTasks = tasks.filter(task => task.timeframe === '今週');
+  const fetchCalendarEvents = async () => {
+    const events = await listUpcomingEvents();
+    setCalendarEvents(events);
+  };
+
+  const handleGoogleSignIn = async () => {
+    await handleAuthClick();
+    setIsSignedIn(true);
+    fetchCalendarEvents();
+  };
+
+  const handleGoogleSignOut = () => {
+    handleSignoutClick();
+    setIsSignedIn(false);
+    setCalendarEvents([]);
+  };
+
+  const todayTasks = tasks.filter(task => isToday(parseISO(task.dueDate)));
+  const thisWeekTasks = tasks.filter(task => !isToday(parseISO(task.dueDate)));
 
   const toggleTaskStatus = (taskId) => {
     const updatedTasks = tasks.map(task => {
@@ -99,21 +112,27 @@ export default function Dashboard({ projects = [] }) {
     const now = new Date();
     const currentHour = now.getHours();
 
+    const timeSlots = [
+      { label: '朝', start: 0, end: 10 },
+      { label: '日中', start: 10, end: 18 },
+      { label: '夜', start: 18, end: 24 },
+    ];
+
     return (
       <div className="relative h-96 overflow-y-auto">
-        {['朝', '日中', '夜'].map((timeOfDay, index) => (
-          <div key={timeOfDay} className="mb-4">
-            <h4 className="text-sm font-semibold mb-2">{timeOfDay}</h4>
+        {timeSlots.map((slot) => (
+          <div key={slot.label} className="mb-4">
+            <h4 className="text-sm font-semibold mb-2">{slot.label}</h4>
             <div className="space-y-2">
               {calendarEvents.filter(event => {
-                const eventHour = parseInt(event.start.split(':')[0]);
-                return (index === 0 && eventHour < 10) ||
-                       (index === 1 && eventHour >= 10 && eventHour < 18) ||
-                       (index === 2 && eventHour >= 18);
+                const eventHour = new Date(event.start).getHours();
+                return eventHour >= slot.start && eventHour < slot.end;
               }).map(event => (
                 <div key={event.id} className="bg-blue-100 p-2 rounded">
                   <p className="font-semibold">{event.title}</p>
-                  <p className="text-sm text-gray-600">{event.start} - {event.end}</p>
+                  <p className="text-sm text-gray-600">
+                    {format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}
+                  </p>
                 </div>
               ))}
             </div>
@@ -158,7 +177,14 @@ export default function Dashboard({ projects = [] }) {
             <CardTitle>Google Calendar</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderCalendar()}
+            {isSignedIn ? (
+              <>
+                {renderCalendar()}
+                <Button onClick={handleGoogleSignOut} className="mt-4">Sign Out</Button>
+              </>
+            ) : (
+              <Button onClick={handleGoogleSignIn}>Sign In with Google</Button>
+            )}
           </CardContent>
         </Card>
       </div>
