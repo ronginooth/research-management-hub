@@ -65,18 +65,25 @@ export const handleAuthClick = () => {
     return;
   }
 
-  tokenClient.callback = async (resp) => {
-    if (resp.error !== undefined) {
-      throw resp;
-    }
-    await listUpcomingEvents();
-  };
+  return new Promise((resolve, reject) => {
+    tokenClient.callback = async (resp) => {
+      if (resp.error !== undefined) {
+        reject(resp);
+      }
+      try {
+        const events = await listUpcomingEvents();
+        resolve(events);
+      } catch (error) {
+        reject(error);
+      }
+    };
 
-  if (gapi.client.getToken() === null) {
-    tokenClient.requestAccessToken({prompt: 'consent'});
-  } else {
-    tokenClient.requestAccessToken({prompt: ''});
-  }
+    if (gapi.client.getToken() === null) {
+      tokenClient.requestAccessToken({prompt: 'consent'});
+    } else {
+      tokenClient.requestAccessToken({prompt: ''});
+    }
+  });
 };
 
 export const handleSignoutClick = () => {
@@ -117,4 +124,18 @@ export const listUpcomingEvents = async () => {
     console.error('Error fetching calendar events:', error);
     return [];
   }
+};
+
+export const loadGoogleApi = () => {
+  const script = document.createElement('script');
+  script.src = 'https://apis.google.com/js/api.js';
+  script.onload = () => {
+    gapi.load('client', initializeGoogleApi);
+  };
+  document.body.appendChild(script);
+
+  const gisScript = document.createElement('script');
+  gisScript.src = 'https://accounts.google.com/gsi/client';
+  gisScript.onload = gisLoaded;
+  document.body.appendChild(gisScript);
 };
