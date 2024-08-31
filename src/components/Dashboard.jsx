@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CalendarIcon, ChevronRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
+import { getTasks } from '../utils/taskDatabase';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -15,7 +16,13 @@ const publicationData = [
   { month: 'Jun', count: 1 },
 ];
 
-export default function Dashboard({ tasks = [], projects = [] }) {
+export default function Dashboard({ projects = [] }) {
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    setTasks(getTasks());
+  }, []);
+
   const todayTasks = tasks.filter(task => task.timeframe === '今日');
   const thisWeekTasks = tasks.filter(task => task.timeframe === '今週');
 
