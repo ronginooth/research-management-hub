@@ -1,22 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { loadGoogleApi, handleAuthClick, handleSignoutClick } from '../utils/googleCalendarApi';
+import { loadGoogleApi, handleAuthClick, handleSignoutClick, listUpcomingEvents } from '../utils/googleCalendarApi';
 import { Button } from "@/components/ui/button";
 
 const CalendarIntegration = () => {
   const [events, setEvents] = useState([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadGoogleApi();
+    const initializeGoogleApi = async () => {
+      try {
+        await loadGoogleApi();
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Failed to initialize Google API:', error);
+        setError('Failed to load Google API. Please try again later.');
+        setIsLoading(false);
+      }
+    };
+
+    initializeGoogleApi();
   }, []);
 
   const handleAuth = async () => {
     try {
-      const calendarEvents = await handleAuthClick();
+      setIsLoading(true);
+      await handleAuthClick();
+      const calendarEvents = await listUpcomingEvents();
       setEvents(calendarEvents);
       setIsSignedIn(true);
+      setIsLoading(false);
     } catch (error) {
       console.error('Authentication failed:', error);
+      setError('Authentication failed. Please try again.');
+      setIsLoading(false);
     }
   };
 
@@ -26,13 +44,21 @@ const CalendarIntegration = () => {
     setIsSignedIn(false);
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>;
+  }
+
   return (
-    <div>
+    <div className="p-4">
       <h2 className="text-2xl font-bold mb-4">Google Calendar Integration</h2>
       {!isSignedIn ? (
-        <Button id="authorize_button" onClick={handleAuth}>Authorize</Button>
+        <Button onClick={handleAuth}>Authorize</Button>
       ) : (
-        <Button onClick={handleSignout}>Sign Out</Button>
+        <Button onClick={handleSignout} variant="destructive">Sign Out</Button>
       )}
       {events.length > 0 && (
         <ul className="mt-4 space-y-2">
