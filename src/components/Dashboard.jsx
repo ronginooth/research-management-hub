@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, ChevronRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
-import { getTasks } from '../utils/taskDatabase';
+import { getTasks, updateTask } from '../utils/taskDatabase';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -25,6 +27,44 @@ export default function Dashboard({ projects = [] }) {
 
   const todayTasks = tasks.filter(task => task.timeframe === '今日');
   const thisWeekTasks = tasks.filter(task => task.timeframe === '今週');
+
+  const toggleTaskStatus = (taskId) => {
+    const updatedTasks = tasks.map(task => {
+      if (task.id === taskId) {
+        const updatedTask = { ...task, status: task.status === '完了' ? '未完了' : '完了' };
+        updateTask(updatedTask);
+        return updatedTask;
+      }
+      return task;
+    });
+    setTasks(updatedTasks);
+  };
+
+  const renderTaskList = (taskList) => (
+    <ul className="space-y-2">
+      {taskList.length > 0 ? (
+        taskList.map(task => (
+          <li key={task.id} className="flex items-center space-x-2">
+            <Checkbox
+              checked={task.status === '完了'}
+              onCheckedChange={() => toggleTaskStatus(task.id)}
+            />
+            <Link to={`/task/${task.id}`} className={`flex-grow ${task.status === '完了' ? 'line-through text-gray-500' : ''}`}>
+              {task.name}
+            </Link>
+            <span className="text-sm text-gray-500">{task.dueDate}</span>
+            {task.project && (
+              <Badge variant="outline">
+                {projects.find(p => p.id === task.project)?.name || 'Unknown Project'}
+              </Badge>
+            )}
+          </li>
+        ))
+      ) : (
+        <li>タスクはありません</li>
+      )}
+    </ul>
+  );
 
   return (
     <div>
@@ -84,31 +124,9 @@ export default function Dashboard({ projects = [] }) {
         </CardHeader>
         <CardContent>
           <h3 className="text-lg font-semibold mb-2">今日のタスク</h3>
-          <ul className="space-y-2 mb-4">
-            {todayTasks.length > 0 ? (
-              todayTasks.map(task => (
-                <li key={task.id} className="flex items-center">
-                  <CalendarIcon className="mr-2 text-blue-500" size={16} />
-                  <Link to={`/task/${task.id}`}>{task.name}</Link>
-                </li>
-              ))
-            ) : (
-              <li>今日のタスクはありません</li>
-            )}
-          </ul>
-          <h3 className="text-lg font-semibold mb-2">今週のタスク</h3>
-          <ul className="space-y-2">
-            {thisWeekTasks.length > 0 ? (
-              thisWeekTasks.map(task => (
-                <li key={task.id} className="flex items-center">
-                  <CalendarIcon className="mr-2 text-green-500" size={16} />
-                  <Link to={`/task/${task.id}`}>{task.name}</Link>
-                </li>
-              ))
-            ) : (
-              <li>今週のタスクはありません</li>
-            )}
-          </ul>
+          {renderTaskList(todayTasks)}
+          <h3 className="text-lg font-semibold mt-4 mb-2">今週のタスク</h3>
+          {renderTaskList(thisWeekTasks)}
         </CardContent>
       </Card>
     </div>
