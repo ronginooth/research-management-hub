@@ -9,19 +9,6 @@ let tokenClient;
 let gapiInited = false;
 let gisInited = false;
 
-export const initializeGoogleApi = () => {
-  return new Promise((resolve, reject) => {
-    gapi.load('client', async () => {
-      try {
-        await initializeGapiClient();
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-};
-
 const initializeGapiClient = async () => {
   try {
     await gapi.client.init({
@@ -36,7 +23,7 @@ const initializeGapiClient = async () => {
   }
 };
 
-export const gisLoaded = () => {
+const gisLoaded = () => {
   if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
@@ -125,26 +112,34 @@ export const listUpcomingEvents = async () => {
 
 export const loadGoogleApi = () => {
   return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = () => {
-      gapi.load('client', async () => {
-        try {
-          await initializeGoogleApi();
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      });
+    const loadGapiScript = () => {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = () => {
+        gapi.load('client', async () => {
+          try {
+            await initializeGapiClient();
+            loadGisScript();
+          } catch (error) {
+            reject(error);
+          }
+        });
+      };
+      script.onerror = () => reject(new Error('Failed to load GAPI script'));
+      document.body.appendChild(script);
     };
-    document.body.appendChild(script);
 
-    const gisScript = document.createElement('script');
-    gisScript.src = 'https://accounts.google.com/gsi/client';
-    gisScript.onload = () => {
-      gisLoaded();
-      resolve();
+    const loadGisScript = () => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = () => {
+        gisLoaded();
+        resolve();
+      };
+      script.onerror = () => reject(new Error('Failed to load GIS script'));
+      document.body.appendChild(script);
     };
-    document.body.appendChild(gisScript);
+
+    loadGapiScript();
   });
 };

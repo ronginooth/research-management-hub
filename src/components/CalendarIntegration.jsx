@@ -6,6 +6,7 @@ const CalendarIntegration = () => {
   const [events, setEvents] = useState([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const initializeGoogleAPI = async () => {
@@ -14,6 +15,7 @@ const CalendarIntegration = () => {
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to initialize Google API:', error);
+        setError('Failed to initialize Google API. Please try again later.');
         setIsLoading(false);
       }
     };
@@ -28,6 +30,7 @@ const CalendarIntegration = () => {
       setIsSignedIn(true);
     } catch (error) {
       console.error('Authentication failed:', error);
+      setError('Authentication failed. Please try again.');
     }
   };
 
@@ -35,10 +38,15 @@ const CalendarIntegration = () => {
     handleSignoutClick();
     setEvents([]);
     setIsSignedIn(false);
+    setError(null);
   };
 
   if (isLoading) {
-    return <div>Loading Google API...</div>;
+    return <div className="p-4">Loading Google API...</div>;
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-500">Error: {error}</div>;
   }
 
   return (
