@@ -10,38 +10,64 @@ let gapiInited = false;
 let gisInited = false;
 
 export const initializeGoogleApi = () => {
-  gapi.load('client', initializeGapiClient);
+  return new Promise((resolve, reject) => {
+    gapi.load('client', async () => {
+      try {
+        await initializeGapiClient();
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
 };
 
 const initializeGapiClient = async () => {
-  await gapi.client.init({
-    apiKey: API_KEY,
-    discoveryDocs: [DISCOVERY_DOC],
-  });
-  gapiInited = true;
-  maybeEnableButtons();
+  try {
+    await gapi.client.init({
+      apiKey: API_KEY,
+      discoveryDocs: [DISCOVERY_DOC],
+    });
+    gapiInited = true;
+    maybeEnableButtons();
+  } catch (error) {
+    console.error('Error initializing GAPI client:', error);
+    throw error;
+  }
 };
 
 export const gisLoaded = () => {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: '', // defined later
-  });
-  gisInited = true;
-  maybeEnableButtons();
+  if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: '', // defined later
+    });
+    gisInited = true;
+    maybeEnableButtons();
+  } else {
+    console.error('Google Identity Services not loaded');
+  }
 };
 
 const maybeEnableButtons = () => {
   if (gapiInited && gisInited) {
-    document.getElementById('authorize_button').style.visibility = 'visible';
+    const authorizeButton = document.getElementById('authorize_button');
+    if (authorizeButton) {
+      authorizeButton.style.visibility = 'visible';
+    }
   }
 };
 
 export const handleAuthClick = () => {
+  if (!tokenClient) {
+    console.error('Token client not initialized');
+    return;
+  }
+
   tokenClient.callback = async (resp) => {
     if (resp.error !== undefined) {
-      throw (resp);
+      throw resp;
     }
     await listUpcomingEvents();
   };
@@ -62,30 +88,33 @@ export const handleSignoutClick = () => {
 };
 
 export const listUpcomingEvents = async () => {
-  let response;
+  if (!gapi.client) {
+    console.error('GAPI client not initialized');
+    return [];
+  }
+
   try {
-    const request = {
+    const response = await gapi.client.calendar.events.list({
       'calendarId': 'primary',
       'timeMin': (new Date()).toISOString(),
       'showDeleted': false,
       'singleEvents': true,
       'maxResults': 10,
       'orderBy': 'startTime',
-    };
-    response = await gapi.client.calendar.events.list(request);
-  } catch (err) {
-    console.error(err);
-    return [];
-  }
+    });
 
-  const events = response.result.items;
-  if (!events || events.length == 0) {
+    const events = response.result.items;
+    if (!events || events.length === 0) {
+      return [];
+    }
+    return events.map((event) => ({
+      id: event.id,
+      title: event.summary,
+      start: event.start.dateTime || event.start.date,
+      end: event.end.dateTime || event.end.date,
+    }));
+  } catch (error) {
+    console.error('Error fetching calendar events:', error);
     return [];
   }
-  return events.map((event) => ({
-    id: event.id,
-    title: event.summary,
-    start: event.start.dateTime || event.start.date,
-    end: event.end.dateTime || event.end.date,
-  }));
 };
