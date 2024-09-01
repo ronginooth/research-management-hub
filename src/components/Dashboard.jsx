@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Link } from 'react-router-dom';
 import { getTasks, updateTask, addTask } from '../utils/taskDatabase';
 import { format, parseISO, isToday } from 'date-fns';
-import { loadGoogleApi, handleAuthClick, handleSignoutClick, listUpcomingEvents } from '../utils/googleCalendarApi';
+import GoogleCalendar from './GoogleCalendar';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -24,50 +24,10 @@ const publicationData = [
 export default function Dashboard({ projects = [] }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
-  const [calendarEvents, setCalendarEvents] = useState([]);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [isGoogleApiLoaded, setIsGoogleApiLoaded] = useState(false);
 
   useEffect(() => {
     setTasks(getTasks());
-    const initializeGoogleCalendar = async () => {
-      try {
-        await loadGoogleApi();
-        setIsGoogleApiLoaded(true);
-      } catch (error) {
-        console.error('Failed to initialize Google Calendar API:', error);
-      }
-    };
-
-    initializeGoogleCalendar();
   }, []);
-
-  const fetchCalendarEvents = async () => {
-    const events = await listUpcomingEvents();
-    setCalendarEvents(events);
-  };
-
-  const handleGoogleSignIn = async () => {
-    if (!isGoogleApiLoaded) {
-      console.error('Google API not loaded yet');
-      return;
-    }
-
-    try {
-      const events = await handleAuthClick();
-      console.log('Fetched events:', events);
-      setCalendarEvents(events);
-      setIsSignedIn(true);
-    } catch (error) {
-      console.error('Failed to sign in:', error);
-    }
-  };
-
-  const handleGoogleSignOut = () => {
-    handleSignoutClick();
-    setIsSignedIn(false);
-    setCalendarEvents([]);
-  };
 
   const todayTasks = tasks.filter(task => isToday(parseISO(task.dueDate)));
   const thisWeekTasks = tasks.filter(task => !isToday(parseISO(task.dueDate)));
@@ -128,44 +88,6 @@ export default function Dashboard({ projects = [] }) {
     </ul>
   );
 
-  const renderCalendar = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-
-    const timeSlots = [
-      { label: '朝', start: 0, end: 10 },
-      { label: '日中', start: 10, end: 18 },
-      { label: '夜', start: 18, end: 24 },
-    ];
-
-    return (
-      <div className="relative h-96 overflow-y-auto">
-        {timeSlots.map((slot) => (
-          <div key={slot.label} className="mb-4">
-            <h4 className="text-sm font-semibold mb-2">{slot.label}</h4>
-            <div className="space-y-2">
-              {calendarEvents.filter(event => {
-                const eventHour = new Date(event.start).getHours();
-                return eventHour >= slot.start && eventHour < slot.end;
-              }).map(event => (
-                <div key={event.id} className="bg-blue-100 p-2 rounded">
-                  <p className="font-semibold">{event.title}</p>
-                  <p className="text-sm text-gray-600">
-                    {format(new Date(event.start), 'HH:mm')} - {format(new Date(event.end), 'HH:mm')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-        <div
-          className="absolute left-0 right-0 border-t-2 border-red-500"
-          style={{ top: `${(currentHour / 24) * 100}%` }}
-        ></div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">研究管理ダッシュボード</h1>
@@ -192,25 +114,7 @@ export default function Dashboard({ projects = [] }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Google Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isGoogleApiLoaded ? (
-              isSignedIn ? (
-                <>
-                  {renderCalendar()}
-                  <Button onClick={handleGoogleSignOut} className="mt-4">Sign Out</Button>
-                </>
-              ) : (
-                <Button onClick={handleGoogleSignIn}>Sign In with Google</Button>
-              )
-            ) : (
-              <p>Loading Google API...</p>
-            )}
-          </CardContent>
-        </Card>
+        <GoogleCalendar />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
