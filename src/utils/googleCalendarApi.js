@@ -1,5 +1,5 @@
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
 
@@ -8,7 +8,12 @@ let gapiInited = false;
 let gisInited = false;
 
 export const initializeGoogleApi = async () => {
-  await new Promise((resolve, reject) => {
+  await loadGapiClient();
+  initializeGisClient();
+};
+
+const loadGapiClient = () => {
+  return new Promise((resolve, reject) => {
     gapi.load('client', async () => {
       try {
         await gapi.client.init({
@@ -16,48 +21,48 @@ export const initializeGoogleApi = async () => {
           discoveryDocs: [DISCOVERY_DOC],
         });
         gapiInited = true;
-        maybeEnableButtons();
         resolve();
       } catch (error) {
         reject(error);
       }
     });
   });
+};
 
+const initializeGisClient = () => {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    callback: '', // defined later
+    callback: '', // Will be set later
   });
   gisInited = true;
-  maybeEnableButtons();
 };
 
-const maybeEnableButtons = () => {
-  if (gapiInited && gisInited) {
-    console.log('Google APIs initialized');
-  }
-};
-
-export const handleAuthClick = () => {
+export const handleSignIn = () => {
   return new Promise((resolve, reject) => {
+    if (!gapiInited || !gisInited) {
+      reject(new Error('Google API not initialized'));
+      return;
+    }
+
     tokenClient.callback = async (resp) => {
       if (resp.error !== undefined) {
         reject(resp);
+      } else {
+        await listCalendars();
+        resolve();
       }
-      await listCalendars();
-      resolve();
     };
 
     if (gapi.client.getToken() === null) {
-      tokenClient.requestAccessToken({prompt: 'consent'});
+      tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
-      tokenClient.requestAccessToken({prompt: ''});
+      tokenClient.requestAccessToken({ prompt: '' });
     }
   });
 };
 
-export const handleSignoutClick = () => {
+export const handleSignOut = () => {
   const token = gapi.client.getToken();
   if (token !== null) {
     google.accounts.oauth2.revoke(token.access_token);
@@ -99,26 +104,5 @@ export const listUpcomingEvents = async (calendarId = 'primary') => {
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     return [];
-  }
-};
-
-export const loadGoogleApi = async () => {
-  const loadScript = (src) => {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.body.appendChild(script);
-    });
-  };
-
-  try {
-    await loadScript('https://apis.google.com/js/api.js');
-    await loadScript('https://accounts.google.com/gsi/client');
-    await initializeGoogleApi();
-  } catch (error) {
-    console.error('Failed to load Google API scripts:', error);
-    throw error;
   }
 };

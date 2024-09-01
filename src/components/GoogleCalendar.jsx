@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadGoogleApi, handleAuthClick, handleSignoutClick, listCalendars, listUpcomingEvents } from '../utils/googleCalendarApi';
+import { initializeGoogleApi, handleSignIn, handleSignOut, listCalendars, listUpcomingEvents } from '../utils/googleCalendarApi';
 
 const GoogleCalendar = () => {
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -12,9 +12,9 @@ const GoogleCalendar = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const initializeGoogleAPI = async () => {
+    const initialize = async () => {
       try {
-        await loadGoogleApi();
+        await initializeGoogleApi();
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to initialize Google API:', error);
@@ -22,12 +22,12 @@ const GoogleCalendar = () => {
       }
     };
 
-    initializeGoogleAPI();
+    initialize();
   }, []);
 
-  const handleSignIn = async () => {
+  const onSignIn = async () => {
     try {
-      await handleAuthClick();
+      await handleSignIn();
       const calendarList = await listCalendars();
       setCalendars(calendarList);
       setIsSignedIn(true);
@@ -36,8 +36,8 @@ const GoogleCalendar = () => {
     }
   };
 
-  const handleSignOut = () => {
-    handleSignoutClick();
+  const onSignOut = () => {
+    handleSignOut();
     setIsSignedIn(false);
     setCalendars([]);
     setSelectedCalendar('');
@@ -61,10 +61,10 @@ const GoogleCalendar = () => {
       </CardHeader>
       <CardContent>
         {!isSignedIn ? (
-          <Button onClick={handleSignIn}>Sign in with Google</Button>
+          <Button onClick={onSignIn}>Sign in with Google</Button>
         ) : (
           <>
-            <Button onClick={handleSignOut} variant="outline">Sign Out</Button>
+            <Button onClick={onSignOut} variant="outline">Sign Out</Button>
             <Select value={selectedCalendar} onValueChange={handleCalendarChange}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select a calendar" />
