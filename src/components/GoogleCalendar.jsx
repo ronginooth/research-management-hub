@@ -16,6 +16,13 @@ const GoogleCalendar = () => {
       try {
         await initializeGoogleApi();
         setIsLoading(false);
+        // Check if the user is already signed in
+        const signedIn = await handleSignIn(true);
+        if (signedIn) {
+          setIsSignedIn(true);
+          const calendarList = await listCalendars();
+          setCalendars(calendarList);
+        }
       } catch (error) {
         console.error('Failed to initialize Google API:', error);
         setIsLoading(false);

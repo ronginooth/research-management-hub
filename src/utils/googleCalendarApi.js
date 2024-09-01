@@ -9,7 +9,7 @@ let gisInited = false;
 
 export const initializeGoogleApi = async () => {
   await loadGapiClient();
-  initializeGisClient();
+  await loadGisClient();
 };
 
 const loadGapiClient = () => {
@@ -29,35 +29,43 @@ const loadGapiClient = () => {
   });
 };
 
-const initializeGisClient = () => {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: '', // Will be set later
+const loadGisClient = () => {
+  return new Promise((resolve) => {
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleCredentialResponse,
+    });
+    gisInited = true;
+    resolve();
   });
-  gisInited = true;
 };
 
-export const handleSignIn = () => {
+const handleCredentialResponse = (response) => {
+  if (response.credential) {
+    const token = response.credential;
+    gapi.client.setToken({ access_token: token });
+  }
+};
+
+export const handleSignIn = (silent = false) => {
   return new Promise((resolve, reject) => {
     if (!gapiInited || !gisInited) {
       reject(new Error('Google API not initialized'));
       return;
     }
 
-    tokenClient.callback = async (resp) => {
-      if (resp.error !== undefined) {
-        reject(resp);
-      } else {
-        await listCalendars();
-        resolve();
-      }
-    };
-
     if (gapi.client.getToken() === null) {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      if (silent) {
+        resolve(false);
+        return;
+      }
+      google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          reject(new Error('Consent skipped or not displayed'));
+        }
+      });
     } else {
-      tokenClient.requestAccessToken({ prompt: '' });
+      resolve(true);
     }
   });
 };
@@ -65,8 +73,9 @@ export const handleSignIn = () => {
 export const handleSignOut = () => {
   const token = gapi.client.getToken();
   if (token !== null) {
-    google.accounts.oauth2.revoke(token.access_token);
-    gapi.client.setToken('');
+    google.accounts.id.revoke(token.access_token, () => {
+      gapi.client.setToken('');
+    });
   }
 };
 

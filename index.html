@@ -9,6 +9,14 @@
     <meta property="og:image" content="/og-image.svg" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+      function handleCredentialResponse(response) {
+        if (response.credential) {
+          const event = new CustomEvent('googleSignIn', { detail: response });
+          window.dispatchEvent(event);
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
