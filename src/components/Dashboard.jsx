@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,7 +10,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { Link } from 'react-router-dom';
 import { getTasks, updateTask, addTask } from '../utils/taskDatabase';
 import { format, parseISO, isToday } from 'date-fns';
-import GoogleCalendar from './GoogleCalendar';
+import { useGoogleAuth, listEvents } from '../lib/google-calendar';
 
 const publicationData = [
   { month: 'Jan', count: 2 },
@@ -24,10 +24,23 @@ const publicationData = [
 export default function Dashboard({ projects = [] }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
     setTasks(getTasks());
   }, []);
+
+  const handleCredentialResponse = useCallback(async (response) => {
+    const accessToken = response.credential;
+    try {
+      const calendarEvents = await listEvents(accessToken);
+      setEvents(calendarEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  }, []);
+
+  const { signIn } = useGoogleAuth(handleCredentialResponse);
 
   const todayTasks = tasks.filter(task => isToday(parseISO(task.dueDate)));
   const thisWeekTasks = tasks.filter(task => !isToday(parseISO(task.dueDate)));
@@ -114,7 +127,23 @@ export default function Dashboard({ projects = [] }) {
           </CardContent>
         </Card>
 
-        <GoogleCalendar />
+        <Card>
+          <CardHeader>
+            <CardTitle>Google Calendar</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={signIn}>Sign in with Google</Button>
+            {events.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {events.map((event) => (
+                  <li key={event.id} className="text-sm">
+                    {event.summary} - {new Date(event.start.dateTime || event.start.date).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
