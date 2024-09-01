@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, ChevronRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
 import { getTasks, updateTask, addTask } from '../utils/taskDatabase';
@@ -25,22 +25,26 @@ export default function Dashboard({ projects = [] }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [events, setEvents] = useState([]);
+  const { signIn, isSignedIn } = useGoogleAuth();
 
   useEffect(() => {
     setTasks(getTasks());
   }, []);
 
-  const handleCredentialResponse = useCallback(async (response) => {
-    const accessToken = response.credential;
+  useEffect(() => {
+    if (isSignedIn) {
+      fetchEvents();
+    }
+  }, [isSignedIn]);
+
+  const fetchEvents = async () => {
     try {
-      const calendarEvents = await listEvents(accessToken);
+      const calendarEvents = await listEvents();
       setEvents(calendarEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
     }
-  }, []);
-
-  const { signIn } = useGoogleAuth(handleCredentialResponse);
+  };
 
   const todayTasks = tasks.filter(task => isToday(parseISO(task.dueDate)));
   const thisWeekTasks = tasks.filter(task => !isToday(parseISO(task.dueDate)));
@@ -132,8 +136,9 @@ export default function Dashboard({ projects = [] }) {
             <CardTitle>Google Calendar</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={signIn}>Sign in with Google</Button>
-            {events.length > 0 && (
+            {!isSignedIn ? (
+              <Button onClick={signIn}>Sign in with Google</Button>
+            ) : (
               <ul className="mt-4 space-y-2">
                 {events.map((event) => (
                   <li key={event.id} className="text-sm">

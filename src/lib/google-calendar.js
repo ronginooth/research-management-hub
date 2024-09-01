@@ -1,32 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-let tokenClient;
+export const useGoogleAuth = () => {
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [tokenClient, setTokenClient] = useState(null);
 
-export const useGoogleAuth = (callback) => {
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        callback: callback,
-      });
-
-      tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/calendar.readonly',
-        callback: '', // defined later
-      });
+    const initializeGoogleAuth = () => {
+      if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/calendar.readonly',
+          callback: (response) => {
+            if (response.access_token) {
+              setIsSignedIn(true);
+            }
+          },
+        });
+        setTokenClient(client);
+      } else {
+        console.error('Google API not loaded');
+      }
     };
 
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [callback]);
+    if (document.readyState === 'complete') {
+      initializeGoogleAuth();
+    } else {
+      window.addEventListener('load', initializeGoogleAuth);
+      return () => window.removeEventListener('load', initializeGoogleAuth);
+    }
+  }, []);
 
   const signIn = () => {
     if (tokenClient) {
@@ -36,26 +38,21 @@ export const useGoogleAuth = (callback) => {
     }
   };
 
-  return { signIn };
+  return { signIn, isSignedIn };
 };
 
-export const listEvents = async (accessToken) => {
+export const listEvents = async () => {
   try {
-    const response = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=10&orderBy=startTime&singleEvents=true&timeMin=' + new Date().toISOString(),
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await window.gapi.client.calendar.events.list({
+      'calendarId': 'primary',
+      'timeMin': (new Date()).toISOString(),
+      'showDeleted': false,
+      'singleEvents': true,
+      'maxResults': 10,
+      'orderBy': 'startTime'
+    });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch events');
-    }
-
-    const data = await response.json();
-    return data.items;
+    return response.result.items;
   } catch (error) {
     console.error('Error fetching calendar events:', error);
     throw error;
