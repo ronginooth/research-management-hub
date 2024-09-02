@@ -32,6 +32,9 @@ npm i
 # This will run a dev server with auto reloading and an instant preview.
 npm run dev
 ```
+**環境のセットアップ**
+1. `.env.example`を`.env`にコピーします
+2. `.env`内のプレースホルダー値を実際の認証情報に置き換えます
 
 **Edit a file directly in GitHub**
 

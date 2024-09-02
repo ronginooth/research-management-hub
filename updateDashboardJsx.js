@@ -1,4 +1,14 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function updateDashboardJsx() {
+  const filePath = path.join(__dirname, 'src', 'components', 'Dashboard.jsx');
+
+  const content = `
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -91,7 +101,7 @@ export default function Dashboard({ projects = [] }) {
               className="mt-1"
             />
             <div className="flex-grow">
-              <Link to={`/task/${task.id}`} className={`block ${task.status === '完了' ? 'line-through text-gray-500' : ''}`}>
+              <Link to={\`/task/\${task.id}\`} className={\`block \${task.status === '完了' ? 'line-through text-gray-500' : ''}\`}>
                 {task.name}
               </Link>
               <div className="text-sm text-gray-500 flex items-center space-x-2 mt-1">
@@ -146,7 +156,7 @@ export default function Dashboard({ projects = [] }) {
                       style={{
                         top: topPosition,
                         height: height,
-                        borderLeftColor: event.colorId ? `#${event.colorId}` : '#4285F4',
+                        borderLeftColor: event.colorId ? \`#\${event.colorId}\` : '#4285F4',
                         borderLeftWidth: '4px'
                       }}
                     >
@@ -163,7 +173,7 @@ export default function Dashboard({ projects = [] }) {
         ))}
         <div 
           className="absolute left-0 right-0 border-t border-red-500 z-10" 
-          style={{ top: `${((tokyoNow.getHours() % 1) * 60 + tokyoNow.getMinutes()) / 60 * 100}%` }}
+          style={{ top: \`\${((tokyoNow.getHours() % 1) * 60 + tokyoNow.getMinutes()) / 60 * 100}%\` }}
         >
           <span className="absolute -top-3 -left-16 text-xs text-red-500">
             {format(tokyoNow, 'HH:mm')}
@@ -278,3 +288,14 @@ export default function Dashboard({ projects = [] }) {
     </div>
   );
 }
+`;
+
+  try {
+    await fs.writeFile(filePath, content, 'utf8');
+    console.log('Dashboard.jsx has been successfully updated!');
+  } catch (error) {
+    console.error('Error updating Dashboard.jsx:', error);
+  }
+}
+
+updateDashboardJsx();
